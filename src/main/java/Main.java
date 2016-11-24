@@ -22,7 +22,6 @@ import org.apache.http.*;
 //Comment stuff out before writing your crap and make sure u dont push and pull anyhow
 public class Main {
     static class Config {
-        public static final int DEFAULT_NUM_THREADS = Runtime.getRuntime().availableProcessors()*2;
         public static final int DEFAULT_PORT = 19999;
     }
 
