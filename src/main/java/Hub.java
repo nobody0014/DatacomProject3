@@ -27,11 +27,8 @@ public class Hub {
     //1) need to ip address and the port of the tracker
     //2) go into the tracker and register itself
     //3) start the client download
-    public void download(String url, String fileName){
+    public void download(String fileName){
         try{
-            List<String> announceURLs  = new ArrayList<>();
-            announceURLs.add(url);
-            generateTorrentFile(".", fileName, announceURLs);
             startClient(false,0.0,0.0,fileName,".",null);
         }catch (Exception e){System.out.println(e.getMessage());}
 

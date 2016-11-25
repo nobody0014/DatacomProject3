@@ -26,8 +26,8 @@ import javax.jmdns.ServiceListener;
                     try{
                         if(!addr.getHostAddress().equals(InetAddress.getLocalHost().getHostAddress())){
                             ipList.remove(addr.getHostAddress());
-                            System.out.println("Removed: " + InetAddress.getLocalHost().getHostAddress());
                         }
+                        System.out.println("Removed: " + InetAddress.getLocalHost().getHostAddress());
                     }catch (Exception e){System.out.println(e.getMessage());}
                 }
             }
@@ -35,11 +35,11 @@ import javax.jmdns.ServiceListener;
             public void serviceResolved(ServiceEvent event){
                 for(InetAddress addr : event.getInfo().getInetAddresses()){
                     try{
+                        System.out.println("Detecting foreign IP: " + InetAddress.getLocalHost().getHostAddress());
                         if(!addr.getHostAddress().equals(InetAddress.getLocalHost().getHostAddress())){
-                            System.out.println("Detecting foreign IP: " + InetAddress.getLocalHost().getHostAddress());
                             ipList.add(addr.getHostAddress());
-                            System.out.println("Added: " + InetAddress.getLocalHost().getHostAddress());
                         }
+                        System.out.println("Added: " + InetAddress.getLocalHost().getHostAddress());
                     }catch (Exception e){System.out.println(e.getMessage());}
 
                 }

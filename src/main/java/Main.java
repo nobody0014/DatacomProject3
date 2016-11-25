@@ -1,14 +1,9 @@
 import java.io.IOException;
 import java.io.InterruptedIOException;
-
-/**
- * Created by Wit on 11/22/2016 AD.
- */
 import java.net.Inet4Address;
 import java.util.*;
 import java.io.*;
 import java.util.concurrent.*;
-
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
@@ -17,8 +12,6 @@ import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.nio.client.HttpAsyncClient;
 import spark.Route;
 import static spark.Spark.*;
-import com.google.gson.Gson;
-import jargs.gnu.CmdLineParser;
 import org.apache.http.*;
 
 //File where everything start, but we probably wont use it till the project is done or for testing our classes
@@ -31,6 +24,7 @@ public class Main {
     public static void main(String[] args){
         Service s = new Service("_WitJo._http._tcp.local.");
         Hub h = new Hub();
+        s.start();
         //s.registered()
         port(Config.DEFAULT_PORT);
 
@@ -45,19 +39,20 @@ public class Main {
             String toReturn = null;
             System.out.println("Received download command from: " + host);
             System.out.println("Will attempt to download: " + fileName);
-            if (fileName != null && fileName.length() > 0 ) {
-                h.download(host,fileName);
-            }
-            else {
-                toReturn = "Invalid filename";
-                halt(400, toReturn);
-            }
+//            if (fileName != null && fileName.length() > 0 ) {
+//                h.download(fileName);
+//            }
+//            else {
+//                toReturn = "Invalid filename";
+//                halt(400, toReturn);
+//            }
             return toReturn;
         };
     }
 
     private static Route upload(Hub h, Service s) {
         return (request, response) -> {
+            System.out.println("Received upload command");
             String fileName = request.params("fileName");
             String toReturn = null;
             if ( fileName != null && fileName.length() > 0) {
