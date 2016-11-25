@@ -8,31 +8,32 @@ public class Service {
     ServiceDiscovery server;
     JmDNS jmdns;
     ServiceInfo serviceInfo;
+    String serviceName;
 
-    public Service(){
+    public Service(String serviceName){
         try{
-            server = new ServiceDiscovery();
-            serviceInfo = ServiceInfo.create("_http._tcp.local.", "Heyooo", 80, "path=index.html");
-            jmdns = JmDNS.create(InetAddress.getLocalHost());
+            this.serviceName = serviceName;
+            this.server = new ServiceDiscovery(this.serviceName);
+            this.serviceInfo = ServiceInfo.create(this.serviceName, "Hello", 80, "path=index.html");
+            this.jmdns = JmDNS.create(InetAddress.getLocalHost());
         }catch (Exception e){System.out.println(e.getMessage());}
 
     }
     public void start(){
-        server.run();
+        this.server.run();
         register();
     }
     public void register(){
         try{
-            ServiceInfo serviceInfo = ServiceInfo.create("_http._tcp.local.", "Heyooo", 80, "path=index.html");
-            jmdns.registerService(serviceInfo);
+            this.jmdns.registerService(this.serviceInfo);
         }catch (Exception e){System.out.println(e.getMessage());}
 
     }
     public void unregister(){
-        jmdns.unregisterAllServices();
+        this.jmdns.unregisterAllServices();
     }
 
     public Set<String> getIPs(){
-        return server.getIPs();
+        return this.server.getIPs();
     }
 }

@@ -29,7 +29,7 @@ public class Main {
     }
 
     public static void main(String[] args){
-        Service s = new Service();
+        Service s = new Service("_WitJo._http._tcp.local.");
         Hub h = new Hub();
         //s.registered()
         port(Config.DEFAULT_PORT);
@@ -42,13 +42,14 @@ public class Main {
         return (request, response) -> {
             String host = request.host();
             String fileName = request.params("FileName");
-            int port = request.port();
             String toReturn = null;
+            System.out.println("Received download command from: " + host);
+            System.out.println("Will attempt to download: " + fileName);
             if (fileName != null && fileName.length() > 0 ) {
-
+                h.download(host,fileName);
             }
             else {
-                toReturn = "Invalid parcelId";
+                toReturn = "Invalid filename";
                 halt(400, toReturn);
             }
             return toReturn;
@@ -64,7 +65,7 @@ public class Main {
                 notifyEveryone(fileName,s.getIPs());
             }
             else {
-                toReturn = "Invalid parcelId";
+                toReturn = "Invalid fileName";
                 halt(400, toReturn);
             }
             return toReturn;
