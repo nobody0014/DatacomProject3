@@ -1,4 +1,5 @@
 
+import java.net.Inet4Address;
 import java.util.*;
 import java.io.IOException;
 import java.lang.reflect.Array;
@@ -16,32 +17,28 @@ import javax.jmdns.ServiceListener;
         private class  SampleListener  implements ServiceListener{
             Set<String> ipList;
             public SampleListener(Set<String> s){
+                super();
                 ipList = s;
             }
             @Override
             public void serviceAdded(ServiceEvent event)  {}
             @Override
             public void serviceRemoved(ServiceEvent event) {
-                for(InetAddress addr : event.getInfo().getInetAddresses()){
+                for(Inet4Address addr : event.getInfo().getInet4Addresses()){
                     try{
-                        if(!addr.getHostAddress().equals(InetAddress.getLocalHost().getHostAddress())){
-                            ipList.remove(addr.getHostAddress());
-                        }
-                        System.out.println("Removed: " + InetAddress.getLocalHost().getHostAddress());
+                        ipList.remove(addr.getHostAddress());
+                        System.out.println("Removed: " + addr.getHostAddress());
                     }catch (Exception e){System.out.println(e.getMessage());}
                 }
             }
             @Override
             public void serviceResolved(ServiceEvent event){
-                for(InetAddress addr : event.getInfo().getInetAddresses()){
+                for(Inet4Address addr : event.getInfo().getInet4Addresses()){
                     try{
-                        System.out.println("Detecting foreign IP: " + InetAddress.getLocalHost().getHostAddress());
-                        if(!addr.getHostAddress().equals(InetAddress.getLocalHost().getHostAddress())){
-                            ipList.add(addr.getHostAddress());
-                        }
-                        System.out.println("Added: " + InetAddress.getLocalHost().getHostAddress());
+                        System.out.println("Detecting IP: " + addr.getHostAddress());
+                        ipList.add(addr.getHostAddress());
+                        System.out.println("Added: " + addr.getHostAddress());
                     }catch (Exception e){System.out.println(e.getMessage());}
-
                 }
             }
         }
@@ -55,7 +52,7 @@ import javax.jmdns.ServiceListener;
         public void run() {
             try {
                 // Create a JmDNS instance
-                JmDNS jmdns = JmDNS.create(InetAddress.getLocalHost());
+                JmDNS jmdns = JmDNS.create(Inet4Address.getLocalHost());
                 // Add a service listener
                 this.sl = new SampleListener(new HashSet<>());
                 jmdns.addServiceListener(this.serviceName, this.sl);

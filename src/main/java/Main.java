@@ -19,10 +19,11 @@ import org.apache.http.*;
 public class Main {
     static class Config {
         public static final int DEFAULT_PORT = 19999;
+        public static final int TORRENT_DEFAULT_PORT = 29999;
     }
 
     public static void main(String[] args){
-        Service s = new Service("_WitJo._http._tcp.local.");
+        Service s = new Service("_http._tcp.local.");
         Hub h = new Hub();
         s.start();
         //s.registered()
@@ -58,6 +59,7 @@ public class Main {
             if ( fileName != null && fileName.length() > 0) {
                 h.upload(fileName);
                 notifyEveryone(fileName,s.getIPs());
+
             }
             else {
                 toReturn = "Invalid fileName";

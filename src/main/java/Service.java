@@ -1,3 +1,4 @@
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.util.Set;
 import javax.jmdns.*;
@@ -15,9 +16,8 @@ public class Service {
             this.serviceName = serviceName;
             this.server = new ServiceDiscovery(this.serviceName);
             this.serviceInfo = ServiceInfo.create(this.serviceName, "Hello", 80, "path=index.html");
-            this.jmdns = JmDNS.create(InetAddress.getLocalHost());
+            this.jmdns = JmDNS.create(Inet4Address.getLocalHost());
         }catch (Exception e){System.out.println(e.getMessage());}
-
     }
     public void start(){
         this.server.run();
