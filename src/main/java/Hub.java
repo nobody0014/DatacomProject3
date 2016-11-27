@@ -30,7 +30,7 @@ public class Hub {
     public void download(String fileName){
         try{
             startClient(false,0.0,0.0,fileName,".",null);
-        }catch (Exception e){System.out.println(e.getMessage());}
+        }catch (Exception e){e.printStackTrace();}
 
     }
 
@@ -42,12 +42,17 @@ public class Hub {
     //4) start the damn client
     public void upload(String fileName){
         try{
+            upload(fileName,Inet4Address.getLocalHost().getHostAddress());
+        }catch (Exception e){e.printStackTrace();}
+    }
+    public void upload(String fileName, String url){
+        try{
             List<String> announceURLs  = new ArrayList<>();
-            announceURLs.add(InetAddress.getLocalHost().getHostAddress());
+            announceURLs.add(url);
             generateTorrentFile(".", fileName, announceURLs);
             generateTrackerServer(6969,".");
             startClient(true,0.0,0.0,fileName,".",null);
-        }catch (Exception e){System.out.println(e.getMessage());}
+        }catch (Exception e){e.printStackTrace();}
     }
 
     //isMaster is telling if you are the downloader
@@ -68,7 +73,7 @@ public class Hub {
             if(isMaster){c.share();}
             else{c.download();}
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -86,7 +91,6 @@ public class Hub {
             }
             List<List<URI>> announceList = new ArrayList<List<URI>>();
             announceList.add(announceURIs);
-
             File source = new File(src);
             String creator = String.format("%s (ttorrent)", System.getProperty("user.name"));
             Torrent torrent;
@@ -99,7 +103,7 @@ public class Hub {
                 torrent = Torrent.create(source,announceList,creator);
             }
             torrent.save(fos);
-        }catch(Exception e){}
+        }catch(Exception e){e.printStackTrace();}
         finally {if(fos != System.out){IOUtils.closeQuietly(fos);}}
     }
     public void generateTrackerServer(int port, String directory){
@@ -113,6 +117,7 @@ public class Hub {
 
             t.start();
         } catch (Exception e) {
+            e.printStackTrace();
             System.exit(2);
         }
     }
