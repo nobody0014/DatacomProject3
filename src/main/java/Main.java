@@ -36,17 +36,15 @@ public class Main {
     private static Route download(Hub h) {
         return (request, response) -> {
             String host = request.host();
+            int port = request.port();
             String fileName = request.params("FileName");
             String toReturn = null;
             System.out.println("Received download command from: " + host);
-            System.out.println("Will attempt to download: " + fileName);
-//            if (fileName != null && fileName.length() > 0 ) {
-//                h.download(fileName);
-//            }
-//            else {
-//                toReturn = "Invalid filename";
-//                halt(400, toReturn);
-//            }
+            System.out.println("Will attempt to download the torrrent file: " + fileName);
+            TorrentClient tc = new TorrentClient(port,host,fileName);
+            tc.download();
+            System.out.println("Finish downloading the torrent file, connecting to the server");
+            h.download(fileName);
             return toReturn;
         };
     }
@@ -56,10 +54,12 @@ public class Main {
             System.out.println("Received upload command");
             String fileName = request.params("fileName");
             String toReturn = null;
+            Notifier n = new Notifier(fileName,s.getIPs(),Config.DEFAULT_PORT);
+            TorrentServer ts = new TorrentServer(Config.TORRENT_DEFAULT_PORT,fileName + ".torrent");
             if ( fileName != null && fileName.length() > 0) {
                 h.upload(fileName);
-                notifyEveryone(fileName,s.getIPs());
-
+                ts.run();
+                n.run();
             }
             else {
                 toReturn = "Invalid fileName";
@@ -67,24 +67,5 @@ public class Main {
             }
             return toReturn;
         };
-    }
-    private static void notifyEveryone(String fileName, Set<String> ips){
-        HttpAsyncClient client = HttpAsyncClients.createDefault();
-        HttpPost post = new HttpPost();
-        post.setHeader("fileName",fileName);
-        for(String ip: ips){
-            HttpHost host = new HttpHost(ip + "/download",Config.DEFAULT_PORT);
-            client.execute(host, post, new FutureCallback<HttpResponse>() {
-                @Override
-                public void completed(HttpResponse httpResponse) {
-                }
-                @Override
-                public void failed(Exception e) {
-                }
-                @Override
-                public void cancelled() {
-                }
-            });
-        }
     }
 }
