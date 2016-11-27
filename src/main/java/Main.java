@@ -59,6 +59,8 @@ public class Main {
             if ( fileName != null && fileName.length() > 0) {
                 h.upload(fileName);
                 ts.run();
+                //Sleep so that the torrent server has time to set itself up
+                Thread.sleep(2000);
                 n.run();
             }
             else {

@@ -32,6 +32,7 @@ public class TorrentServer implements Runnable{
     }
     private Route download(){
         return (request, response) -> {
+            System.out.println("Receving torrent file request from" + request.host());
             long byteStart,byteEnd;
             String[] byteRange = request.params("bytes").split("-");
             byteStart = Long.valueOf(byteRange[0]);
