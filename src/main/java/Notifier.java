@@ -7,9 +7,6 @@ import org.apache.http.nio.client.HttpAsyncClient;
 
 import java.util.Set;
 
-/**
- * Created by Wit on 11/27/2016 AD.
- */
 public class Notifier implements Runnable {
     String fileName;
     Set<String> ips;

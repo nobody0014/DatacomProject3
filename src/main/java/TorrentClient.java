@@ -2,14 +2,10 @@
  * Created by Wit on 11/26/2016 AD.
  */
 import org.apache.commons.io.IOUtils;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.nio.client.HttpAsyncClients;
-import org.apache.http.nio.client.HttpAsyncClient;
 
 import java.io.*;
 import java.net.URI;
@@ -17,6 +13,7 @@ import java.net.URISyntaxException;
 
 
 public class TorrentClient {
+    
     String fileName;
     String host;
     int port;

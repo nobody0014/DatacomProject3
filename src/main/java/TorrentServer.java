@@ -9,9 +9,12 @@ import java.io.RandomAccessFile;
 import static spark.Spark.*;
 
 public class TorrentServer implements Runnable{
+
     public int TORRENT_DEFAULT_PORT;
-    public String TORRENT_FILE_NAME;
     public long fileSize;
+
+    public String TORRENT_FILE_NAME;
+
     public File f;
     public RandomAccessFile raf;
 

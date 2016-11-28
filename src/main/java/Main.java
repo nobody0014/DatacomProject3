@@ -1,23 +1,7 @@
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.net.Inet4Address;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.*;
-import java.io.*;
-import java.util.concurrent.*;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.concurrent.FutureCallback;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.nio.client.HttpAsyncClients;
-import org.apache.http.nio.client.HttpAsyncClient;
+
 import spark.Route;
 import static spark.Spark.*;
-import org.apache.http.*;
 
-import javax.print.URIException;
 
 //File where everything start, but we probably wont use it till the project is done or for testing our classes
 //Comment stuff out before writing your crap and make sure u dont push and pull anyhow

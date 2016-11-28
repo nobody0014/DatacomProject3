@@ -24,21 +24,17 @@ import java.util.*;
 //Client used for downloading, right now using ttorent protocol
 public class Hub {
 
-    //Downloading the file from people
-    //Downloading steps
-    //1) need to ip address and the port of the tracker
-    //2) go into the tracker and register itself
-    //3) start the client download
+
     public void download(String fileName){
+
         try{
             startClient(Inet4Address.getLocalHost(), new File(fileName), new File("."));
-
         }catch (Exception e){e.printStackTrace();}
-
     }
 
 
     public void upload(String fileName){
+
         try{
             File fn = new File(fileName + ".torrent");
             File out = new File(".");
@@ -54,7 +50,6 @@ public class Hub {
             for (InetAddress ip: ips){
                 startClient(ip,fn,out);
             }
-
         }catch (Exception e){e.printStackTrace();}
     }
 
@@ -70,7 +65,6 @@ public class Hub {
                 }
             }
         }
-
         return ips;
     }
 
@@ -100,19 +94,13 @@ public class Hub {
         for (Tracker tracker : trackers){
             tracker.announce(TrackedTorrent.load(f));
         }
-
-
-
     }
 
     public Tracker generateTrackerServer(InetAddress iddr) throws IOException{
 
-
         Tracker t = new Tracker(iddr);
         t.start();
         return t;
-
-
     }
 
 
