@@ -33,6 +33,7 @@ public class Main {
         ClientStatus = Status.WAITING;
         Service s = new Service("_http._tcp.local.");
         s.start();
+
         //s.registered()
         port(Config.DEFAULT_PORT);
 
@@ -44,7 +45,20 @@ public class Main {
         return (request, response) -> {
             String toReturn = null;
             if(ClientStatus == Status.WAITING){
+                ClientStatus = Status.WORKING;
 
+                String fileName = request.params("fileName");
+                String host = request.host();
+                int port = request.port();
+
+                TorrentClient tc = new TorrentClient(port,host,fileName);
+                Hub hub = new Hub();
+
+                tc.download();
+                hub.download(fileName);
+
+
+                ClientStatus = Status.WAITING;
             }
             return toReturn;
         };
@@ -54,10 +68,26 @@ public class Main {
         return (request, response) -> {
             String toReturn = null;
             if(ClientStatus == Status.WAITING){
+                ClientStatus = Status.WORKING;
+
+                String fileName = request.params("fileName");
+
+                Notifier nf = new Notifier(fileName,s.getIPs(),Config.DEFAULT_PORT);
+                TorrentServer ts = new TorrentServer(Config.TORRENT_DEFAULT_PORT, fileName+".torrent");
+                Hub hub = new Hub();
 
 
+                hub.upload(fileName);
+                ts.run();
 
 
+                Thread.sleep(2000);
+
+
+                nf.run();
+
+
+                ClientStatus = Status.WAITING;
             }
             return toReturn;
         };
