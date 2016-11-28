@@ -13,7 +13,7 @@ import java.net.URISyntaxException;
 
 
 public class TorrentClient {
-    
+
     String fileName;
     String host;
     int port;

@@ -12,7 +12,6 @@ public class Notifier implements Runnable {
     Set<String> ips;
     int port;
 
-
     public Notifier(String fileName, Set<String> ips, int port){
         this.fileName = fileName;
         this.ips = ips;
@@ -22,6 +21,8 @@ public class Notifier implements Runnable {
     public void run(){
         notifyEveryone();
     }
+
+    //Just keep sending to everyone
     private void notifyEveryone(){
         HttpAsyncClient client = HttpAsyncClients.createDefault();
         HttpPost post = new HttpPost();

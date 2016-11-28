@@ -21,7 +21,6 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 
-//Client used for downloading, right now using ttorent protocol
 public class Hub {
 
 
@@ -51,6 +50,7 @@ public class Hub {
                 startClient(ip,fn,out);
             }
         }catch (Exception e){e.printStackTrace();}
+
     }
 
     public List<InetAddress> getIPs() throws IOException{
@@ -80,9 +80,7 @@ public class Hub {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
-
 
 
     public void generateTorrentFile(File fileName, List<List<URI>> uris, List<Tracker> trackers)

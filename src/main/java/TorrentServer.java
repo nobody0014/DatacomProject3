@@ -2,12 +2,12 @@
  * Created by Wit on 11/25/2016 AD.
  */
 import spark.Route;
-
 import java.io.File;
 import java.io.RandomAccessFile;
-
 import static spark.Spark.*;
 
+
+//Torrent file server!, used for master
 public class TorrentServer implements Runnable{
 
     public int TORRENT_DEFAULT_PORT;
@@ -28,11 +28,14 @@ public class TorrentServer implements Runnable{
         }catch (Exception e){}
     }
 
+
     public void run(){
         port(TORRENT_DEFAULT_PORT);
         get("/downloadTorrent", download());
         get("/downloadTorrentFileSize", downloadSize());
     }
+
+
     private Route download(){
         return (request, response) -> {
             System.out.println("Receving torrent file request from" + request.host());
@@ -49,6 +52,8 @@ public class TorrentServer implements Runnable{
             return raf.read(new byte[length]);
         };
     }
+
+
     private Route downloadSize(){
         return (request, response) -> {
             return fileSize;
