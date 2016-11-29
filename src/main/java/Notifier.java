@@ -1,10 +1,15 @@
 import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.concurrent.FutureCallback;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.nio.client.HttpAsyncClients;
 import org.apache.http.nio.client.HttpAsyncClient;
 
+import java.io.IOException;
+import java.net.*;
+import java.util.Calendar;
 import java.util.Set;
 
 public class Notifier implements Runnable {
@@ -19,27 +24,17 @@ public class Notifier implements Runnable {
     }
 
     public void run(){
-        notifyEveryone();
+        try{notifyEveryone();}catch (Exception e){e.printStackTrace();};
     }
 
     //Just keep sending to everyone
-    private void notifyEveryone(){
-        HttpAsyncClient client = HttpAsyncClients.createDefault();
-        HttpPost post = new HttpPost();
-        post.setHeader("fileName",this.fileName);
+    private void notifyEveryone() throws URISyntaxException, IOException{
+
+        HttpClient client = HttpClients.createDefault();
         for(String ip: this.ips){
-            HttpHost host = new HttpHost(ip + "/download",this.port);
-            client.execute(host, post, new FutureCallback<HttpResponse>() {
-                @Override
-                public void completed(HttpResponse httpResponse) {
-                }
-                @Override
-                public void failed(Exception e) {
-                }
-                @Override
-                public void cancelled() {
-                }
-            });
+            HttpPost post = new HttpPost(new URI("http://" + ip + ":" + this.port + "/download"));
+            post.setHeader("fileName",this.fileName);
+            client.execute(post);
         }
     }
 }

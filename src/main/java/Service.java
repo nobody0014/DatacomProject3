@@ -38,8 +38,13 @@ public class Service {
         }catch (Exception e){System.out.println(e.getMessage());}
     }
     public void start(){
-        this.server.run();
-        register();
+        try{
+            Thread t = new Thread(this.server);
+            Thread.sleep(1000);
+            t.start();
+            register();
+        }catch (Exception e){e.printStackTrace();}
+
     }
     public void register(){
         try{

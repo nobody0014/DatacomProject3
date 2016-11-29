@@ -35,20 +35,30 @@ public class Hub {
     public void upload(String fileName){
 
         try{
-            File fn = new File(fileName + ".torrent");
+            File fn = new File(fileName);
+            File tn = new File(fileName + ".torrent");
             File out = new File(".");
             List<InetAddress> ips = getIPs();
             List<Tracker> trackers = new ArrayList<>();
             List<List<URI>> uris = new ArrayList<>();
+
+            System.out.println("Adding the uris");
             uris.add(new ArrayList<>());
             for (InetAddress ip : ips){
                 uris.get(0).add(new URI("http://" + ip.getHostAddress() + ":6969/announce"));
                 trackers.add(generateTrackerServer(ip));
             }
+
+
+            System.out.println("Generating torrent file");
             generateTorrentFile(fn,uris,trackers);
+
+            System.out.println("Starting clients");
             for (InetAddress ip: ips){
-                startClient(ip,fn,out);
+                startClient(ip,tn,out);
             }
+            System.out.println("Finishing starting clients");
+
         }catch (Exception e){e.printStackTrace();}
 
     }
@@ -56,12 +66,12 @@ public class Hub {
     public List<InetAddress> getIPs() throws IOException{
 
         List<InetAddress> ips = new ArrayList<>();
-        Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
-        for (NetworkInterface netint : Collections.list(nets)){
-            Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
-            if(inetAddresses.hasMoreElements()){
-                for (InetAddress inetAddress : Collections.list(inetAddresses)) {
-                    ips.add(inetAddress);
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        for (NetworkInterface interface_ : Collections.list(interfaces)) {
+            Enumeration<InetAddress> addresses = interface_.getInetAddresses();
+            for (InetAddress address : Collections.list(addresses)) {
+                if (address instanceof  Inet4Address) {
+                    ips.add(address);
                 }
             }
         }
@@ -76,7 +86,6 @@ public class Hub {
             c.setMaxDownloadRate(0.0);
             c.setMaxUploadRate(0.0);
             c.share();
-            c.waitForCompletion();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -85,8 +94,7 @@ public class Hub {
 
     public void generateTorrentFile(File fileName, List<List<URI>> uris, List<Tracker> trackers)
             throws InterruptedException, IOException, NoSuchAlgorithmException {
-
-        Torrent t = Torrent.create(fileName, uris , "Wit/Jo");
+        Torrent t = Torrent.create(fileName, uris, "Wit.Jo");
         File f = new File(fileName + ".torrent");
         t.save(new FileOutputStream(f));
         for (Tracker tracker : trackers){

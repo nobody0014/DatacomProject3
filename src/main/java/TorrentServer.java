@@ -25,12 +25,17 @@ public class TorrentServer implements Runnable{
             this.f =  new File(torrentFileName);
             this.raf = new RandomAccessFile(f,"r");
             this.fileSize = this.f.length();
-        }catch (Exception e){}
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
-
+    @Override
     public void run(){
+        System.out.println("Running torrent server");
         port(TORRENT_DEFAULT_PORT);
+
+        System.out.println("Placing the routes");
         get("/downloadTorrent", download());
         get("/downloadTorrentFileSize", downloadSize());
     }
