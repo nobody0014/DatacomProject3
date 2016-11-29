@@ -1,17 +1,13 @@
 
-import java.net.Inet4Address;
+import java.net.*;
 import java.util.*;
 import java.io.IOException;
 import java.lang.reflect.Array;
-import java.net.InetAddress;
-import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceEvent;
 import javax.jmdns.ServiceListener;
-
 
     public class ServiceDiscovery implements Runnable  {
         private class  SampleListener  implements ServiceListener{
@@ -33,6 +29,7 @@ import javax.jmdns.ServiceListener;
             }
             @Override
             public void serviceResolved(ServiceEvent event){
+
                 for(Inet4Address addr : event.getInfo().getInet4Addresses()){
                     try{
                         System.out.println("Detecting IP: " + addr.getHostAddress());
@@ -42,20 +39,32 @@ import javax.jmdns.ServiceListener;
                 }
             }
         }
-
         SampleListener sl;
         String serviceName;
+        List<JmDNS> jmDNSList;
         public ServiceDiscovery(String serviceName){
             this.serviceName = serviceName;
+            this.jmDNSList = new ArrayList<>();
         }
-
         public void run() {
             try {
-                // Create a JmDNS instance
-                JmDNS jmdns = JmDNS.create(Inet4Address.getLocalHost());
-                // Add a service listener
-                this.sl = new SampleListener(new HashSet<>());
-                jmdns.addServiceListener(this.serviceName, this.sl);
+                // iterate over the network interfaces known to java
+                Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+                for (NetworkInterface interface_ : Collections.list(interfaces)) {
+                    // iterate over the addresses of that interface
+                    Enumeration<InetAddress> addresses = interface_.getInetAddresses();
+                    for (InetAddress address : Collections.list(addresses)) {
+                        if (address instanceof  Inet4Address) {
+                            //create an JmDNS instance of this address
+                            JmDNS jmdns = JmDNS.create(address);
+                            this.sl = new SampleListener(new HashSet<>());
+                            //make that address of a certain interface listen to a specified serviceName
+                            jmdns.addServiceListener(this.serviceName, this.sl);
+                            this.jmDNSList.add(jmdns);
+                        }
+                    }
+                }
+
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             }
@@ -64,4 +73,3 @@ import javax.jmdns.ServiceListener;
             return this.sl.ipList;
         }
     }
-
