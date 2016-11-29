@@ -14,8 +14,6 @@ import java.net.*;
 public class Service {
     ServiceDiscovery server;
     List<JmDNS> jmdnss;
-    JmDNS jmdns;
-    ServiceInfo serviceInfo;
     String serviceName;
 
     public Service(String serviceName){
@@ -35,7 +33,7 @@ public class Service {
             }
             this.serviceName = serviceName;
             this.server = new ServiceDiscovery(this.serviceName);
-            this.serviceInfo = ServiceInfo.create(this.serviceName, "Hello", 80, "path=index.html");
+
 
         }catch (Exception e){System.out.println(e.getMessage());}
     }
@@ -46,10 +44,10 @@ public class Service {
     public void register(){
         try{
             for(JmDNS jmdns : jmdnss){
-                jmdns.registerService(this.serviceInfo);
+                ServiceInfo serviceInfo = ServiceInfo.create(this.serviceName, "Hello", 80, "path=index.html");
+                jmdns.registerService(serviceInfo);
             }
         }catch (Exception e){System.out.println(e.getMessage());}
-
     }
     public void unregister(){
         for (JmDNS jmdns : jmdnss){

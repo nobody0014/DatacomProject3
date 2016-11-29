@@ -1,4 +1,6 @@
 
+import org.eclipse.jetty.util.ConcurrentHashSet;
+
 import java.net.*;
 import java.util.*;
 import java.io.IOException;
@@ -11,10 +13,8 @@ import javax.jmdns.ServiceListener;
 
     public class ServiceDiscovery implements Runnable  {
         private class  SampleListener  implements ServiceListener{
-            Set<String> ipList;
-            public SampleListener(Set<String> s){
+            public SampleListener(){
                 super();
-                ipList = s;
             }
             @Override
             public void serviceAdded(ServiceEvent event)  {}
@@ -42,9 +42,11 @@ import javax.jmdns.ServiceListener;
         SampleListener sl;
         String serviceName;
         List<JmDNS> jmDNSList;
+        ConcurrentHashSet<String> ipList;
         public ServiceDiscovery(String serviceName){
             this.serviceName = serviceName;
             this.jmDNSList = new ArrayList<>();
+            this.ipList = new ConcurrentHashSet<>();
         }
         public void run() {
             try {
@@ -57,7 +59,7 @@ import javax.jmdns.ServiceListener;
                         if (address instanceof  Inet4Address) {
                             //create an JmDNS instance of this address
                             JmDNS jmdns = JmDNS.create(address);
-                            this.sl = new SampleListener(new HashSet<>());
+                            this.sl = new SampleListener();
                             //make that address of a certain interface listen to a specified serviceName
                             jmdns.addServiceListener(this.serviceName, this.sl);
                             this.jmDNSList.add(jmdns);
@@ -70,6 +72,6 @@ import javax.jmdns.ServiceListener;
             }
         }
         public Set<String> getIPs(){
-            return this.sl.ipList;
+            return this.ipList;
         }
     }
