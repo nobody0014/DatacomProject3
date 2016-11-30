@@ -61,7 +61,7 @@ public class Main {
                 ClientStatus = Status.WORKING;
                 System.out.println("Starting download process");
 
-                String fileName = request.params("fileName");
+                String fileName = request.headers("fileName");
                 String host = request.host();
                 int port = request.port();
 
@@ -104,7 +104,9 @@ public class Main {
                     System.out.println("Does not detect file on this directory");
                 }
                 else{
+                    System.out.println("File detected in current directory, beginning upload process");
 
+                    System.out.println("Setting up");
                     //Setups --> used threads too
                     Notifier nf = new Notifier(fileName,s.getIPs(),Config.DEFAULT_PORT);
 
@@ -115,13 +117,16 @@ public class Main {
                     Thread tnf = new Thread(nf);
 
                     //Start the hub in another thread
+                    System.out.println("Starting hub");
                     th.start();
 
                     ClientLevel = Level.UPLOADER;
 
+                    System.out.print("Setting up torrent file server");
                     setUpTorrentFileServer(fileName + ".torrent");
 
                     //Sleep for 1 second so that the hub can get everythin in place
+                    System.out.println("Waiting for the hub to start");
                     Thread.sleep(1000);
 
                     //run the notification thread so the system-wide download can start
@@ -134,6 +139,7 @@ public class Main {
 
 
                 ClientStatus = Status.WAITING;
+                ClientLevel = Level.DOWNLOADER;
                 System.out.println("Switched to Waiting mode");
             }
             return toReturn;

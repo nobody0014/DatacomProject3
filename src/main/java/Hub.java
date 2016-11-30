@@ -48,7 +48,6 @@ public class Hub implements Runnable{
     public void run(){
         if(this.isUploader){upload(this.fileName);}
         else{download(fileName);}
-
         System.out.println("Finished all operations");
         this.latch.countDown();
     }
@@ -88,8 +87,9 @@ public class Hub implements Runnable{
 
 
             System.out.println("Creating clients");
+            SharedTorrent st = SharedTorrent.fromFile(tn, out);
             for (InetAddress ip: ips){
-                this.clients.add(createClient(ip, fn, out));
+                this.clients.add(createClient(ip, st));
             }
 
             System.out.println("Starting clients");
@@ -117,7 +117,13 @@ public class Hub implements Runnable{
 
     //Create and set up client
     private ExtendedClient createClient(InetAddress ip, File fileName, File outputValue) throws IOException{
-        ExtendedClient c = new ExtendedClient(ip, SharedTorrent.fromFile(fileName, outputValue));
+        ExtendedClient c = new ExtendedClient(ip, SharedTorrent.fromFile(fileName,outputValue));
+        c.setMaxDownloadRate(0.0);
+        c.setMaxUploadRate(0.0);
+        return c;
+    }
+    private ExtendedClient createClient(InetAddress ip, SharedTorrent st) throws IOException{
+        ExtendedClient c = new ExtendedClient(ip, st);
         c.setMaxDownloadRate(0.0);
         c.setMaxUploadRate(0.0);
         return c;
@@ -126,6 +132,7 @@ public class Hub implements Runnable{
     //Start all the clients created
     private void startClients(ConcurrentLinkedQueue<ExtendedClient> clients) throws InterruptedException{
         CountDownLatch counter = new CountDownLatch(clients.size());
+        System.out.println("Number of clients on this computer: " + clients.size());
 
         for(ExtendedClient client: clients){
             client.setCounter(counter);
