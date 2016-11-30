@@ -40,11 +40,9 @@ public class Service {
     public void start(){
         try{
             Thread t = new Thread(this.server);
-            Thread.sleep(1000);
             t.start();
             register();
         }catch (Exception e){e.printStackTrace();}
-
     }
     public void register(){
         try{

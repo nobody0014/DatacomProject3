@@ -14,25 +14,57 @@ import com.turn.ttorrent.tracker.TrackerService;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.filefilter.TrueFileFilter;
+import org.eclipse.jetty.util.thread.ExecutorThreadPool;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.nio.channels.UnsupportedAddressTypeException;
 import java.net.*;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 
-public class Hub {
+public class Hub implements Runnable{
 
+    boolean isUploader;
 
-    public void download(String fileName){
+    CountDownLatch latch;
+    ConcurrentLinkedQueue<ExtendedClient> clients;
 
-        try{
-            startClient(Inet4Address.getLocalHost(), new File(fileName), new File("."));
-        }catch (Exception e){e.printStackTrace();}
+    ExecutorThreadPool etp;
+
+    String fileName;
+
+    public Hub(boolean isUploader,String fileName, CountDownLatch latch){
+        this.isUploader = isUploader;
+        this.fileName = fileName;
+        this.latch = latch;
+        this.clients = new ConcurrentLinkedQueue<>();
+        this.etp = new ExecutorThreadPool();
+    }
+
+    @Override
+    public void run(){
+        if(this.isUploader){upload(this.fileName);}
+        else{download(fileName);}
+
+        System.out.println("Finished all operations");
+        this.latch.countDown();
     }
 
 
-    public void upload(String fileName){
+
+    //Start the download process
+    private void download(String fileName){
+        try{
+            this.clients.add(createClient(Inet4Address.getLocalHost(), new File(fileName), new File(".")));
+            startClients(this.clients);
+        }catch (Exception e){e.printStackTrace();}
+    }
+
+    //Start the upload process
+    private void upload(String fileName){
 
         try{
             File fn = new File(fileName);
@@ -53,17 +85,22 @@ public class Hub {
             System.out.println("Generating torrent file");
             generateTorrentFile(fn,uris,trackers);
 
-            System.out.println("Starting clients");
+
+
+            System.out.println("Creating clients");
             for (InetAddress ip: ips){
-                startClient(ip,tn,out);
+                this.clients.add(createClient(ip, fn, out));
             }
-            System.out.println("Finishing starting clients");
+
+            System.out.println("Starting clients");
+            startClients(this.clients);
 
         }catch (Exception e){e.printStackTrace();}
 
     }
 
-    public List<InetAddress> getIPs() throws IOException{
+    //Get all the possible Inet4Address in this computer
+    private List<InetAddress> getIPs() throws IOException{
 
         List<InetAddress> ips = new ArrayList<>();
         Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
@@ -78,21 +115,29 @@ public class Hub {
         return ips;
     }
 
-
-    public void startClient(InetAddress ip, File fileName, File outputValue){
-
-        try {
-            Client c = new Client(ip, SharedTorrent.fromFile(fileName, outputValue));
-            c.setMaxDownloadRate(0.0);
-            c.setMaxUploadRate(0.0);
-            c.share();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    //Create and set up client
+    private ExtendedClient createClient(InetAddress ip, File fileName, File outputValue) throws IOException{
+        ExtendedClient c = new ExtendedClient(ip, SharedTorrent.fromFile(fileName, outputValue));
+        c.setMaxDownloadRate(0.0);
+        c.setMaxUploadRate(0.0);
+        return c;
     }
 
+    //Start all the clients created
+    private void startClients(ConcurrentLinkedQueue<ExtendedClient> clients) throws InterruptedException{
+        CountDownLatch counter = new CountDownLatch(clients.size());
 
-    public void generateTorrentFile(File fileName, List<List<URI>> uris, List<Tracker> trackers)
+        for(ExtendedClient client: clients){
+            client.setCounter(counter);
+            this.etp.execute(client);
+        }
+
+        System.out.println("Waiting for all client to shut down");
+        counter.await();
+    }
+
+    //Generate torrent file
+    private void generateTorrentFile(File fileName, List<List<URI>> uris, List<Tracker> trackers)
             throws InterruptedException, IOException, NoSuchAlgorithmException {
         Torrent t = Torrent.create(fileName, uris, "Wit.Jo");
         File f = new File(fileName + ".torrent");
@@ -102,7 +147,8 @@ public class Hub {
         }
     }
 
-    public Tracker generateTrackerServer(InetAddress iddr) throws IOException{
+    //Create the tracker server
+    private Tracker generateTrackerServer(InetAddress iddr) throws IOException{
 
         Tracker t = new Tracker(iddr);
         t.start();
