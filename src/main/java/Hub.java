@@ -47,7 +47,7 @@ public class Hub implements Runnable{
     @Override
     public void run(){
         if(this.isUploader){upload(this.fileName);}
-        else{download(fileName);}
+        else{download(fileName+".torrent");}
         System.out.println("Finished all operations");
         this.latch.countDown();
     }
@@ -57,6 +57,7 @@ public class Hub implements Runnable{
     //Start the download process
     private void download(String fileName){
         try{
+            System.out.println("Creating clients");
             this.clients.add(createClient(Inet4Address.getLocalHost(), new File(fileName), new File(".")));
             startClients(this.clients);
         }catch (Exception e){e.printStackTrace();}
@@ -76,7 +77,10 @@ public class Hub implements Runnable{
             System.out.println("Adding the uris");
             uris.add(new ArrayList<>());
             for (InetAddress ip : ips){
-                uris.get(0).add(new URI("http://" + ip.getHostAddress() + ":6969/announce"));
+                List<URI> uri  = new ArrayList<>();
+                uri.add(new URI("http://" + ip.getHostAddress() + ":6969/announce"));
+                uri.add(new URI("http://" + ip.getHostName() + ":6969/announce"));
+                uris.add(uri);
                 trackers.add(generateTrackerServer(ip));
             }
 
@@ -140,7 +144,7 @@ public class Hub implements Runnable{
         counter.await();
     }
 
-    //Generate torrent file
+    //Generate torrent file and start the tracker too
     private void generateTorrentFile(File fileName, List<List<URI>> uris, List<Tracker> trackers)
             throws InterruptedException, IOException, NoSuchAlgorithmException {
         Torrent t = Torrent.create(fileName, uris, "Wit.Jo");
@@ -153,8 +157,7 @@ public class Hub implements Runnable{
 
     //Create the tracker server
     private Tracker generateTrackerServer(InetAddress iddr) throws IOException{
-
-        Tracker t = new Tracker(iddr);
+        Tracker t = new Tracker(new InetSocketAddress(iddr,6969));
         t.start();
         return t;
     }

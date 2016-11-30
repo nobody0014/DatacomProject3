@@ -28,13 +28,16 @@ public class Notifier implements Runnable {
     }
 
     //Just keep sending to everyone
-    private void notifyEveryone() throws URISyntaxException, IOException{
+    private void notifyEveryone() throws URISyntaxException{
 
         HttpClient client = HttpClients.createDefault();
         for(String ip: this.ips){
             HttpPost post = new HttpPost(new URI("http://" + ip + ":" + this.port + "/download"));
             post.setHeader("fileName",this.fileName);
-            client.execute(post);
+            try{
+                client.execute(post);
+            }catch (Exception e){System.out.println("Connection refused by " + ip);}
+
         }
     }
 }

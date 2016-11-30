@@ -22,7 +22,8 @@ public class Main {
     //Used to check if client is busy or not
     static Status ClientStatus;
 
-
+    static CountDownLatch uploaderLatch;
+    static CountDownLatch downloaderLatch;
 
     //For TorrentServer
     static Level ClientLevel;
@@ -46,7 +47,7 @@ public class Main {
         //Route
         post("/download", download());
         post("/upload", upload(s));
-        get("/downloadTorrent", downloadTorrentFile());
+        get("/downloadTorrentFile", downloadTorrentFile());
         get("/downloadTorrentFileSize", downloadTorrentFileSize());
 
     }
@@ -57,28 +58,36 @@ public class Main {
         return (request, response) -> {
 
             String toReturn = null;
-            if(ClientStatus == Status.WAITING){
+            if (uploaderLatch != null){
+                return null;
+            }
+            else if(ClientStatus == Status.WAITING){
                 ClientStatus = Status.WORKING;
                 System.out.println("Starting download process");
 
+
                 String fileName = request.headers("fileName");
-                String host = request.host();
-                int port = request.port();
+                String client = request.ip();
+                System.out.println("Download information:");
+                System.out.println("File Name: " + fileName);
+                System.out.println("Client: " + client);
 
+                TorrentClient tc = new TorrentClient(client,fileName,Config.DEFAULT_PORT);
 
-                TorrentClient tc = new TorrentClient(port,host,fileName);
-
-                CountDownLatch latch = new CountDownLatch(1);
-                Hub hub = new Hub(false, fileName, latch);
+                downloaderLatch = new CountDownLatch(1);
+                Hub hub = new Hub(false, fileName, downloaderLatch);
 
                 Thread thub = new Thread(hub);
 
+                System.out.println("Downloading the torrent file");
                 tc.download();
+
+                System.out.println("Beginning the download of the actual file");
                 thub.start();
 
 
-                latch.await();
-                ClientStatus = Status.WAITING;
+//                downloaderLatch.await();
+//                ClientStatus = Status.WAITING;
             }
             return toReturn;
         };
@@ -110,11 +119,14 @@ public class Main {
                     //Setups --> used threads too
                     Notifier nf = new Notifier(fileName,s.getIPs(),Config.DEFAULT_PORT);
 
-                    CountDownLatch latch = new CountDownLatch(1);
-                    Hub hub = new Hub(true,fileName, latch);
+                    uploaderLatch = new CountDownLatch(1);
+                    Hub hub = new Hub(true,fileName, uploaderLatch);
+
+                    ClientChecker cc = new ClientChecker(hub);
 
                     Thread th = new Thread(hub);
                     Thread tnf = new Thread(nf);
+                    Thread ttc = new Thread(cc);
 
                     //Start the hub in another thread
                     System.out.println("Starting hub");
@@ -122,25 +134,31 @@ public class Main {
 
                     ClientLevel = Level.UPLOADER;
 
-                    System.out.print("Setting up torrent file server");
+                    //Sleep for 2 second so that the hub can get everythin in place
+                    System.out.println("Waiting for the hub to start");
+                    Thread.sleep(2000);
+
+
+                    System.out.println("Setting up torrent file server");
                     setUpTorrentFileServer(fileName + ".torrent");
 
-                    //Sleep for 1 second so that the hub can get everythin in place
-                    System.out.println("Waiting for the hub to start");
-                    Thread.sleep(1000);
 
                     //run the notification thread so the system-wide download can start
                     System.out.println("Starting the notification");
                     tnf.start();
 
-                    System.out.println("Waitin for all seeding to be over");
-                    latch.await();
+
+                    System.out.print("Starting the checker");
+                    ttc.start();
+
+//                    System.out.println("Waitin for all seeding to be over");
+//                    uploaderLatch.await();
                 }
 
 
-                ClientStatus = Status.WAITING;
-                ClientLevel = Level.DOWNLOADER;
-                System.out.println("Switched to Waiting mode");
+//                ClientStatus = Status.WAITING;
+//                ClientLevel = Level.DOWNLOADER;
+//                System.out.println("Switched to Waiting mode");
             }
             return toReturn;
         };
@@ -149,10 +167,11 @@ public class Main {
 
     private static Route downloadTorrentFile() {
         return (request, response) -> {
+
             if(ClientLevel == Level.UPLOADER){
-                System.out.println("Receving torrent file request from" + request.host());
+                System.out.println("Request for torrent file coming in from " + request.ip());
                 long byteStart,byteEnd;
-                String[] byteRange = request.params("bytes").split("-");
+                String[] byteRange = request.headers("bytes").split("-");
                 byteStart = Long.valueOf(byteRange[0]);
                 if(byteRange.length > 1){
                     byteEnd = Long.valueOf(byteRange[1]);
@@ -161,7 +180,9 @@ public class Main {
                 }
                 int length = (int) (byteEnd-byteStart);
                 raf.seek(byteStart);
-                return raf.read(new byte[length]);
+                byte[] toReturn = new byte[length];
+                raf.read(toReturn);
+                return toReturn;
             }
             return null;
         };
@@ -170,6 +191,8 @@ public class Main {
     private static Route downloadTorrentFileSize() {
         return (request, response) -> {
             if(ClientLevel == Level.UPLOADER){
+                System.out.println("Request for torrent file size coming in from " + request.ip());
+                response.header("size",String.valueOf(fileSize));
                 return fileSize;
             }
             return null;
