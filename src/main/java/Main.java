@@ -133,7 +133,7 @@ public class Main {
                     System.out.println("Starting the notification");
                     tnf.start();
 
-
+                    System.out.println("Waitin for all seeding to be over");
                     latch.await();
                 }
 

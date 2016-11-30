@@ -87,9 +87,8 @@ public class Hub implements Runnable{
 
 
             System.out.println("Creating clients");
-            SharedTorrent st = SharedTorrent.fromFile(tn, out);
             for (InetAddress ip: ips){
-                this.clients.add(createClient(ip, st));
+                this.clients.add(createClient(ip, SharedTorrent.fromFile(tn, out)));
             }
 
             System.out.println("Starting clients");
@@ -118,14 +117,12 @@ public class Hub implements Runnable{
     //Create and set up client
     private ExtendedClient createClient(InetAddress ip, File fileName, File outputValue) throws IOException{
         ExtendedClient c = new ExtendedClient(ip, SharedTorrent.fromFile(fileName,outputValue));
-        c.setMaxDownloadRate(0.0);
-        c.setMaxUploadRate(0.0);
+        c.setClientSpeed(0.0,0.0);
         return c;
     }
     private ExtendedClient createClient(InetAddress ip, SharedTorrent st) throws IOException{
         ExtendedClient c = new ExtendedClient(ip, st);
-        c.setMaxDownloadRate(0.0);
-        c.setMaxUploadRate(0.0);
+        c.setClientSpeed(0.0,0.0);
         return c;
     }
 
