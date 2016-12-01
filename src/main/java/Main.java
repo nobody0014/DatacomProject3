@@ -97,6 +97,7 @@ public class Main {
     private static Route reportClientStatus() {
         return (request, response) -> {
             if(ClientStatus == Status.WORKING){
+                System.out.println("Report coming in from: " + request.ip());
                 if(statusCheckers == null){statusCheckers = new ConcurrentHashMap<>();}
                 statusCheckers.putIfAbsent(request.ip(),false);
                 if (request.headers("status") != null){statusCheckers.put(request.ip(), Boolean.valueOf(request.headers("status")));}
@@ -108,10 +109,15 @@ public class Main {
     private static Route resetSystem(Hub h, StatusReporter sr){
         return (request, response) -> {
             if(ClientStatus == Status.WORKING){
+                System.out.println("System resetting");
                 h.cleanUp();
                 ClientStatus = Status.WAITING;
                 ClientLevel = Level.DOWNLOADER;
                 sr.stopThread();
+                TORRENT_FILE_NAME = null;
+                f =  null;
+                raf = null;
+                fileSize = 0;
             }
             return null;
         };
@@ -169,6 +175,7 @@ public class Main {
                     tnf.start();
 
                     //Starting the reset thread used for when all downloads are done
+                    System.out.println("Starting the reset checking");
                     rn.start();
                 }
             }

@@ -7,6 +7,7 @@ import java.net.URI;
 /**
  * Created by Wit on 12/1/2016 AD.
  */
+
 public class StatusReporter extends Thread{
     boolean stop = false;
     String masterIP;

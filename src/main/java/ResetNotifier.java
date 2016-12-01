@@ -20,7 +20,7 @@ public class ResetNotifier extends Thread {
     }
 
     public void run(){
-        while (checkStatus()){
+        while (!checkStatus()){
             try{Thread.sleep(10000);}catch (Exception e){}
         }
         sendResetNotification();
