@@ -1,4 +1,5 @@
 
+import jargs.gnu.CmdLineParser;
 import spark.Route;
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -24,7 +25,7 @@ public class Main {
     static Status ClientStatus;
 
     //For checking the completion of the entire download --> for master --> use to reset the state of all client
-    static ConcurrentHashMap<String,Boolean> statusCheckers;
+    static ConcurrentHashMap<String,Boolean> statusCheckers = new ConcurrentHashMap<>();
 
 
     //For TorrentServer
@@ -34,11 +35,27 @@ public class Main {
     static File f;
     static RandomAccessFile raf;
 
+    static String ip;
+
 
 
     public static void main(String[] args){
         ClientStatus = Status.WAITING;
         ClientLevel = Level.DOWNLOADER;
+
+
+        //Getting the ip from the command
+        CmdLineParser parser = new CmdLineParser();
+        CmdLineParser.Option iddr = parser.addStringOption('i', "ip");
+        try {
+            parser.parse(args);
+        } catch (Exception oe) {
+            System.err.println(oe.getMessage());
+            System.exit(1);
+        }
+
+        ip = (String) parser.getOptionValue(iddr);
+
 
         Service s = new Service("_http._tcp.local.");
         Hub h = new Hub();
@@ -76,6 +93,7 @@ public class Main {
 
                 TorrentClient tc = new TorrentClient(client,fileName,Config.DEFAULT_PORT);
                 h.setSetting(false,fileName);
+                h.setHostIddr(ip);
                 sr.setMasterIP(client);
                 sr.setHub(h);
 
@@ -88,67 +106,40 @@ public class Main {
 
                 System.out.println("Starting the client status reporter");
                 sr.start();
-            }
 
-            return null;
-        };
-    }
-
-    private static Route reportClientStatus() {
-        return (request, response) -> {
-            if(ClientStatus == Status.WORKING){
-                System.out.println("Report coming in from: " + request.ip());
-                if(statusCheckers == null){statusCheckers = new ConcurrentHashMap<>();}
-                statusCheckers.putIfAbsent(request.ip(),false);
-                if (request.headers("status") != null){statusCheckers.put(request.ip(), Boolean.valueOf(request.headers("status")));}
-            }
-            return null;
-        };
-    }
-
-    private static Route resetSystem(Hub h, StatusReporter sr){
-        return (request, response) -> {
-            if(ClientStatus == Status.WORKING){
-                System.out.println("System resetting");
-                h.cleanUp();
-                ClientStatus = Status.WAITING;
-                ClientLevel = Level.DOWNLOADER;
-                sr.stopThread();
-                TORRENT_FILE_NAME = null;
-                f =  null;
-                raf = null;
-                fileSize = 0;
             }
             return null;
         };
     }
 
 
-
-        //For uploading --> anyone that is the master --> will be invoke by external command
+    //For uploading --> anyone that is the master --> will be invoke by external command
     private static Route upload(Hub h, Service s) {
         return (request, response) -> {
 
-            String toReturn = null;
+            String fileName = request.headers("fileName");
+            File fn = new File(fileName);
+
+
 
             //If the client is working, there is a file being transmitted in the system
             if(ClientStatus == Status.WAITING){
-                ClientStatus = Status.WORKING;
-                System.out.println("Switched to Working mode");
-
-                String fileName = request.headers("fileName");
-                File fn = new File(fileName);
-
-
                 if(!fn.exists()){
                     System.out.println("Does not detect file on this directory");
                 }
                 else{
                     System.out.println("File detected in current directory, beginning upload process");
 
+                    ClientStatus = Status.WORKING;
+                    System.out.println("Switched to Working mode");
+
                     System.out.println("Setting up");
+                    CountDownLatch latch = new CountDownLatch(1);
+
                     //Setups --> used threads too
                     h.setSetting(true,fileName);
+                    h.setHostIddr(ip);
+                    h.setLatch(latch);
 
                     ResetNotifier rn = new ResetNotifier(statusCheckers);
 
@@ -161,9 +152,9 @@ public class Main {
 
                     ClientLevel = Level.UPLOADER;
 
-                    //Sleep for 2 second so that the hub can get everythin in place
+                    //wait for the hub to create torrent server, we will use latch cus we have to be sure
                     System.out.println("Waiting for the hub to start");
-                    Thread.sleep(2000);
+                    latch.await();
 
 
                     System.out.println("Setting up torrent file server");
@@ -177,9 +168,10 @@ public class Main {
                     //Starting the reset thread used for when all downloads are done
                     System.out.println("Starting the reset checking");
                     rn.start();
+
                 }
             }
-            return toReturn;
+            return null;
         };
     }
 
@@ -204,6 +196,40 @@ public class Main {
                 byte[] toReturn = new byte[length];
                 raf.read(toReturn);
                 return toReturn;
+            }
+            return null;
+        };
+    }
+
+
+    private static Route reportClientStatus() {
+        return (request, response) -> {
+            if(ClientStatus == Status.WORKING){
+                System.out.println("Report coming in from: " + request.ip());
+                statusCheckers.putIfAbsent(request.ip(),false);
+                if (request.headers("status") != null){
+                    statusCheckers.put(request.ip(), Boolean.valueOf(request.headers("status")));
+                }
+                System.out.println(request.ip() + "'s Status: " + request.headers("status"));
+            }
+            return null;
+        };
+    }
+
+
+    private static Route resetSystem(Hub h, StatusReporter sr){
+        return (request, response) -> {
+            if(ClientStatus == Status.WORKING){
+                System.out.println("System resetting");
+                h.cleanUp();
+                statusCheckers  = new ConcurrentHashMap<>();
+                ClientStatus = Status.WAITING;
+                ClientLevel = Level.DOWNLOADER;
+                sr.stopThread();
+                TORRENT_FILE_NAME = null;
+                f =  null;
+                raf = null;
+                fileSize = 0;
             }
             return null;
         };

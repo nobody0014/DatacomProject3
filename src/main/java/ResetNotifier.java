@@ -20,9 +20,12 @@ public class ResetNotifier extends Thread {
     }
 
     public void run(){
-        while (!checkStatus()){
-            try{Thread.sleep(10000);}catch (Exception e){}
+        try{
+            while (!checkStatus()){
+                Thread.sleep(3000);
+            }
         }
+        catch (Exception e){System.out.println("Unable to thread sleep");}
         sendResetNotification();
     }
 
@@ -45,6 +48,7 @@ public class ResetNotifier extends Thread {
 
     public boolean checkStatus(){
         if (ipStatus == null){return false;}
+        if (ipStatus.keySet().size() == 0){return false;}
         for(String ip : ipStatus.keySet()){
             if (!ipStatus.get(ip)) {
                 return false;

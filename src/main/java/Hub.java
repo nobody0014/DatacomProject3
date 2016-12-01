@@ -4,7 +4,6 @@
 import java.lang.reflect.Array;
 import java.net.URI;
 
-import com.sun.media.jfxmedia.track.Track;
 import com.turn.ttorrent.common.Torrent;
 import com.turn.ttorrent.client.*;
 import com.turn.ttorrent.tracker.TrackedPeer;
@@ -23,6 +22,7 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 
 public class Hub extends Thread{
 
@@ -35,6 +35,10 @@ public class Hub extends Thread{
     ExecutorThreadPool etp;
 
     String fileName;
+
+    CountDownLatch torrentFileWaiter;
+
+    String iddr;
 
 
 
@@ -51,17 +55,34 @@ public class Hub extends Thread{
         this.fileName = fileName;
     }
 
-    @Override
     public void run(){
         if(this.isUploader){upload(this.fileName);}
         else{download(fileName+".torrent");}
-        System.out.println("Finished all operations");
+        System.out.println("finished the hub run");
     }
+
+
+
+
+
+
+
 
     public void setSetting(boolean isUploader, String fileName){
         this.fileName = fileName;
         this.isUploader = isUploader;
     }
+
+    public void setLatch(CountDownLatch latch){
+        this.torrentFileWaiter = latch;
+    }
+
+    public void setHostIddr(String iddr){
+        this.iddr = iddr;
+    }
+
+
+
 
     public synchronized String getClientsStatus(){
         boolean done = false;
@@ -70,6 +91,13 @@ public class Hub extends Thread{
         }
         return String.valueOf(done);
     }
+
+
+
+
+
+
+
 
     public void cleanUp(){
         for (ExtendedClient ec : this.clients){
@@ -86,14 +114,38 @@ public class Hub extends Thread{
 
 
 
+
+
+
+
+
+
+
+
     //Start the download process
     private void download(String fileName){
         try{
             System.out.println("Creating clients");
-            this.clients.add(createClient(Inet4Address.getLocalHost(), new File(fileName), new File(".")));
+            List<InetAddress> ips = getIPs();
+            if(iddr != null){
+                ips = getIPs(this.iddr);
+            }
+            for(InetAddress iddr: ips){
+                this.clients.add(createClient(iddr, SharedTorrent.fromFile(new File(fileName), new File("."))));
+            }
+
             startClients(this.clients);
         }catch (Exception e){e.printStackTrace();}
     }
+
+
+
+
+
+
+
+
+
 
     //Start the upload process
     private void upload(String fileName){
@@ -103,6 +155,9 @@ public class Hub extends Thread{
             File tn = new File(fileName + ".torrent");
             File out = new File(".");
             List<InetAddress> ips = getIPs();
+            if(iddr != null){
+                 ips = getIPs(this.iddr);
+            }
 
             List<List<URI>> uris = new ArrayList<>();
 
@@ -124,15 +179,25 @@ public class Hub extends Thread{
 
             System.out.println("Creating clients");
             for (InetAddress ip: ips){
+                System.out.println(ip.getHostAddress());
                 this.clients.add(createClient(ip, SharedTorrent.fromFile(tn, out)));
             }
 
             System.out.println("Starting clients");
             startClients(this.clients);
 
-        }catch (Exception e){e.printStackTrace();}
 
+            this.torrentFileWaiter.countDown();
+
+        }catch (Exception e){e.printStackTrace();}
     }
+
+
+
+
+
+
+
 
     //Get all the possible Inet4Address in this computer
     private List<InetAddress> getIPs() throws IOException{
@@ -150,12 +215,27 @@ public class Hub extends Thread{
         return ips;
     }
 
-    //Create and set up client
-    private ExtendedClient createClient(InetAddress ip, File fileName, File outputValue) throws IOException{
-        ExtendedClient c = new ExtendedClient(ip, SharedTorrent.fromFile(fileName,outputValue));
-        c.setClientSpeed(0.0,0.0);
-        return c;
+    private List<InetAddress> getIPs(String iddr) throws IOException{
+
+        List<InetAddress> ips = new ArrayList<>();
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        for (NetworkInterface interface_ : Collections.list(interfaces)) {
+            Enumeration<InetAddress> addresses = interface_.getInetAddresses();
+            for (InetAddress address : Collections.list(addresses)) {
+                if (address instanceof  Inet4Address) {
+                    if(address.getHostAddress().equals(iddr)){ips.add(address);}
+                }
+            }
+        }
+        return ips;
     }
+
+
+
+
+
+
+    //Create and set up client
     private ExtendedClient createClient(InetAddress ip, SharedTorrent st) throws IOException{
         ExtendedClient c = new ExtendedClient(ip, st);
         c.setClientSpeed(0.0,0.0);
@@ -169,8 +249,14 @@ public class Hub extends Thread{
         for(ExtendedClient client: clients){
             this.etp.execute(client);
         }
-
     }
+
+
+
+
+
+
+
 
     //Generate torrent file
     private void generateTorrentFile(File fileName, List<List<URI>> uris, List<Tracker> trackers)
@@ -189,10 +275,5 @@ public class Hub extends Thread{
         t.start();
         return t;
     }
-
-    public void close(){
-
-    }
-
 
 }

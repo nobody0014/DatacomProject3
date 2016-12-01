@@ -31,10 +31,13 @@ public class StatusReporter extends Thread{
     public void run(){
         HttpClient client = HttpClients.createDefault();
         try{
-            HttpPost post  = new HttpPost(new URI("http://" + this.masterIP + ":19999/reportClientStatus"));
             while (!this.stop){
+                HttpPost post  = new HttpPost(new URI("http://" + this.masterIP + ":19999/reportClientStatus"));
+                post.setHeader("status", h.getClientsStatus());
+//                System.out.println("Sent status to master");
                 client.execute(post);
-                Thread.sleep(5000);
+//                System.out.println("Sleeping the notifier for 5 seconds");
+                Thread.sleep(3000);
             }
         }catch (Exception e){System.out.println("Unable to create the post request or unable to thread sleep");}
     }
