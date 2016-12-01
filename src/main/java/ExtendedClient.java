@@ -7,15 +7,10 @@ import java.util.concurrent.CountDownLatch;
 
 
 public class ExtendedClient implements Runnable{
-    CountDownLatch counter;
     Client client;
 
     public ExtendedClient(InetAddress ip, SharedTorrent torrent) throws IOException{
         this.client = new Client(ip,torrent);
-    }
-
-    public void setCounter(CountDownLatch latch){
-        this.counter = latch;
     }
 
     public void setClientSpeed(double up, double down){
@@ -27,6 +22,8 @@ public class ExtendedClient implements Runnable{
     public void run(){
         this.client.share();
         this.client.waitForCompletion();
-        this.counter.countDown();
+    }
+    public void stop(){
+        this.client.stop();
     }
 }

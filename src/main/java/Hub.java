@@ -23,25 +23,32 @@ import java.net.*;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 
-public class Hub implements Runnable{
+public class Hub extends Thread{
 
     boolean isUploader;
 
-    CountDownLatch latch;
     ConcurrentLinkedQueue<ExtendedClient> clients;
+
+    List<Tracker> trackers;
 
     ExecutorThreadPool etp;
 
     String fileName;
 
-    public Hub(boolean isUploader,String fileName, CountDownLatch latch){
-        this.isUploader = isUploader;
-        this.fileName = fileName;
-        this.latch = latch;
+
+
+    public Hub(){
         this.clients = new ConcurrentLinkedQueue<>();
         this.etp = new ExecutorThreadPool();
+        this.trackers = new ArrayList<>();
+    }
+
+
+    public Hub(boolean isUploader,String fileName){
+        this();
+        this.isUploader = isUploader;
+        this.fileName = fileName;
     }
 
     @Override
@@ -49,7 +56,32 @@ public class Hub implements Runnable{
         if(this.isUploader){upload(this.fileName);}
         else{download(fileName+".torrent");}
         System.out.println("Finished all operations");
-        this.latch.countDown();
+    }
+
+    public void setSetting(boolean isUploader, String fileName){
+        this.fileName = fileName;
+        this.isUploader = isUploader;
+    }
+
+    public synchronized String getClientsStatus(){
+        boolean done = false;
+        for (ExtendedClient ec : this.clients){
+            if(ec.client.getState() == Client.ClientState.SEEDING){done = true;}
+        }
+        return String.valueOf(done);
+    }
+
+    public void cleanUp(){
+        for (ExtendedClient ec : this.clients){
+            ec.stop();
+        }
+        for (Tracker tr : trackers){
+            tr.stop();
+        }
+        this.trackers = new ArrayList<>();
+        this.clients = new ConcurrentLinkedQueue<>();
+        this.isUploader = false;
+        this.fileName = null;
     }
 
 
@@ -71,7 +103,7 @@ public class Hub implements Runnable{
             File tn = new File(fileName + ".torrent");
             File out = new File(".");
             List<InetAddress> ips = getIPs();
-            List<Tracker> trackers = new ArrayList<>();
+
             List<List<URI>> uris = new ArrayList<>();
 
             System.out.println("Adding the uris");
@@ -81,12 +113,12 @@ public class Hub implements Runnable{
                 uri.add(new URI("http://" + ip.getHostAddress() + ":6969/announce"));
                 uri.add(new URI("http://" + ip.getHostName() + ":6969/announce"));
                 uris.add(uri);
-                trackers.add(generateTrackerServer(ip));
+                this.trackers.add(generateTrackerServer(ip));
             }
 
 
             System.out.println("Generating torrent file");
-            generateTorrentFile(fn,uris,trackers);
+            generateTorrentFile(fn,uris,this.trackers);
 
 
 
@@ -132,19 +164,15 @@ public class Hub implements Runnable{
 
     //Start all the clients created
     private void startClients(ConcurrentLinkedQueue<ExtendedClient> clients) throws InterruptedException{
-        CountDownLatch counter = new CountDownLatch(clients.size());
         System.out.println("Number of clients on this computer: " + clients.size());
 
         for(ExtendedClient client: clients){
-            client.setCounter(counter);
             this.etp.execute(client);
         }
 
-        System.out.println("Waiting for all client to shut down");
-        counter.await();
     }
 
-    //Generate torrent file and start the tracker too
+    //Generate torrent file
     private void generateTorrentFile(File fileName, List<List<URI>> uris, List<Tracker> trackers)
             throws InterruptedException, IOException, NoSuchAlgorithmException {
         Torrent t = Torrent.create(fileName, uris, "Wit.Jo");
@@ -155,11 +183,15 @@ public class Hub implements Runnable{
         }
     }
 
-    //Create the tracker server
+    //Create and start the tracker server
     private Tracker generateTrackerServer(InetAddress iddr) throws IOException{
         Tracker t = new Tracker(new InetSocketAddress(iddr,6969));
         t.start();
         return t;
+    }
+
+    public void close(){
+
     }
 
 

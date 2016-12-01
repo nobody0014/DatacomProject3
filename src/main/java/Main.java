@@ -2,6 +2,7 @@
 import spark.Route;
 import java.io.File;
 import java.io.RandomAccessFile;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 import static spark.Spark.*;
@@ -22,8 +23,9 @@ public class Main {
     //Used to check if client is busy or not
     static Status ClientStatus;
 
-    static CountDownLatch uploaderLatch;
-    static CountDownLatch downloaderLatch;
+    //For checking the completion of the entire download --> for master --> use to reset the state of all client
+    static ConcurrentHashMap<String,Boolean> statusCheckers;
+
 
     //For TorrentServer
     static Level ClientLevel;
@@ -33,11 +35,14 @@ public class Main {
     static RandomAccessFile raf;
 
 
+
     public static void main(String[] args){
         ClientStatus = Status.WAITING;
         ClientLevel = Level.DOWNLOADER;
 
         Service s = new Service("_http._tcp.local.");
+        Hub h = new Hub();
+        StatusReporter sr = new StatusReporter();
         s.start();
 
 
@@ -45,23 +50,20 @@ public class Main {
         port(Config.DEFAULT_PORT);
 
         //Route
-        post("/download", download());
-        post("/upload", upload(s));
+        post("/download", download(h,sr));
+        post("/upload", upload(h,s));
+        post("/reportClientStatus", reportClientStatus());
+        post("/resetSystem", resetSystem(h,sr));
         get("/downloadTorrentFile", downloadTorrentFile());
         get("/downloadTorrentFileSize", downloadTorrentFileSize());
-
     }
 
 
     //For downloading --> anyone that is not master --> will be invoke by master itself
-    private static Route download() {
+    private static Route download(Hub h, StatusReporter sr) {
         return (request, response) -> {
 
-            String toReturn = null;
-            if (uploaderLatch != null){
-                return null;
-            }
-            else if(ClientStatus == Status.WAITING){
+            if(ClientStatus == Status.WAITING){
                 ClientStatus = Status.WORKING;
                 System.out.println("Starting download process");
 
@@ -73,29 +75,50 @@ public class Main {
                 System.out.println("Client: " + client);
 
                 TorrentClient tc = new TorrentClient(client,fileName,Config.DEFAULT_PORT);
+                h.setSetting(false,fileName);
+                sr.setMasterIP(client);
+                sr.setHub(h);
 
-                downloaderLatch = new CountDownLatch(1);
-                Hub hub = new Hub(false, fileName, downloaderLatch);
-
-                Thread thub = new Thread(hub);
 
                 System.out.println("Downloading the torrent file");
                 tc.download();
 
-                System.out.println("Beginning the download of the actual file");
-                thub.start();
+                System.out.println("Starting the download of the actual file");
+                h.start();
 
-
-//                downloaderLatch.await();
-//                ClientStatus = Status.WAITING;
+                System.out.println("Starting the client status reporter");
+                sr.start();
             }
-            return toReturn;
+
+            return null;
+        };
+    }
+
+    private static Route reportClientStatus() {
+        return (request, response) -> {
+            if(statusCheckers == null){statusCheckers = new ConcurrentHashMap<>();}
+            statusCheckers.putIfAbsent(request.ip(),false);
+            if (request.headers("status") != null){statusCheckers.put(request.ip(), Boolean.valueOf(request.headers("status")));}
+            return null;
+        };
+    }
+
+    private static Route resetSystem(Hub h, StatusReporter sr){
+        return (request, response) -> {
+            if(ClientStatus == Status.WORKING){
+                h.cleanUp();
+                ClientStatus = Status.WAITING;
+                ClientLevel = Level.DOWNLOADER;
+                sr.stopThread();
+            }
+            return null;
         };
     }
 
 
-    //For uploading --> anyone that is the master --> will be invoke by external command
-    private static Route upload(Service s) {
+
+        //For uploading --> anyone that is the master --> will be invoke by external command
+    private static Route upload(Hub h, Service s) {
         return (request, response) -> {
 
             String toReturn = null;
@@ -117,20 +140,16 @@ public class Main {
 
                     System.out.println("Setting up");
                     //Setups --> used threads too
+                    h.setSetting(true,fileName);
+
+                    ResetNotifier rn = new ResetNotifier(statusCheckers);
+
                     Notifier nf = new Notifier(fileName,s.getIPs(),Config.DEFAULT_PORT);
-
-                    uploaderLatch = new CountDownLatch(1);
-                    Hub hub = new Hub(true,fileName, uploaderLatch);
-
-                    ClientChecker cc = new ClientChecker(hub);
-
-                    Thread th = new Thread(hub);
                     Thread tnf = new Thread(nf);
-                    Thread ttc = new Thread(cc);
 
                     //Start the hub in another thread
                     System.out.println("Starting hub");
-                    th.start();
+                    h.start();
 
                     ClientLevel = Level.UPLOADER;
 
@@ -147,22 +166,15 @@ public class Main {
                     System.out.println("Starting the notification");
                     tnf.start();
 
-
-                    System.out.print("Starting the checker");
-                    ttc.start();
-
-//                    System.out.println("Waitin for all seeding to be over");
-//                    uploaderLatch.await();
+                    //Starting the reset thread used for when all downloads are done
+                    rn.start();
                 }
-
-
-//                ClientStatus = Status.WAITING;
-//                ClientLevel = Level.DOWNLOADER;
-//                System.out.println("Switched to Waiting mode");
             }
             return toReturn;
         };
     }
+
+
 
 
     private static Route downloadTorrentFile() {
@@ -187,6 +199,7 @@ public class Main {
             return null;
         };
     }
+
 
     private static Route downloadTorrentFileSize() {
         return (request, response) -> {
