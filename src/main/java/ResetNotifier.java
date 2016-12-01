@@ -2,6 +2,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClients;
 
+import java.net.Inet4Address;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -33,6 +34,9 @@ public class ResetNotifier extends Thread {
             uris.add(new URI("http://" + ip  + ":19999/resetSystem"));
             }catch (Exception e){System.out.println("Unable to form uri for " + ip);}
         }
+        try{
+            uris.add(new URI("http://" + Inet4Address.getLocalHost().getHostAddress() + ":19999/resetSystem"));
+        }catch (Exception e){System.out.println("Unable to form uri for loca host");}
         for(URI uri : uris){
             HttpPost post  = new HttpPost(uri);
             try{client.execute(post);}catch (Exception e){System.out.print("Connection refused by " + uri.getHost());}

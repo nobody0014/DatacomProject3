@@ -96,9 +96,11 @@ public class Main {
 
     private static Route reportClientStatus() {
         return (request, response) -> {
-            if(statusCheckers == null){statusCheckers = new ConcurrentHashMap<>();}
-            statusCheckers.putIfAbsent(request.ip(),false);
-            if (request.headers("status") != null){statusCheckers.put(request.ip(), Boolean.valueOf(request.headers("status")));}
+            if(ClientStatus == Status.WORKING){
+                if(statusCheckers == null){statusCheckers = new ConcurrentHashMap<>();}
+                statusCheckers.putIfAbsent(request.ip(),false);
+                if (request.headers("status") != null){statusCheckers.put(request.ip(), Boolean.valueOf(request.headers("status")));}
+            }
             return null;
         };
     }
