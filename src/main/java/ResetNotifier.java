@@ -20,9 +20,10 @@ public class ResetNotifier extends Thread {
     }
 
     public void run(){
+        HttpClient client  = HttpClients.createDefault();
         try{
             while (!checkStatus()){
-                Thread.sleep(3000);
+                Thread.sleep(5000);
             }
         }
         catch (Exception e){System.out.println("Unable to thread sleep");}

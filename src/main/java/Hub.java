@@ -84,12 +84,14 @@ public class Hub extends Thread{
 
 
 
-    public synchronized String getClientsStatus(){
-        boolean done = false;
+    public String getClientsStatus(){
+        double hiProgress = 0.0;
+
         for (ExtendedClient ec : this.clients){
-            if(ec.client.getState() == Client.ClientState.SEEDING){done = true;}
+            double pro  = ec.progress.getProgress();
+            if(pro > hiProgress){hiProgress =  pro;}
         }
-        return String.valueOf(done);
+        return String.valueOf(hiProgress);
     }
 
 
@@ -133,8 +135,8 @@ public class Hub extends Thread{
             for(InetAddress iddr: ips){
                 this.clients.add(createClient(iddr, SharedTorrent.fromFile(new File(fileName), new File("."))));
             }
-
             startClients(this.clients);
+            this.torrentFileWaiter.countDown();
         }catch (Exception e){e.printStackTrace();}
     }
 
@@ -235,9 +237,14 @@ public class Hub extends Thread{
 
 
 
+
+
+
+
     //Create and set up client
     private ExtendedClient createClient(InetAddress ip, SharedTorrent st) throws IOException{
         ExtendedClient c = new ExtendedClient(ip, st);
+        c.setProgressObserver(new ProgressObserver(0.0));
         c.setClientSpeed(0.0,0.0);
         return c;
     }

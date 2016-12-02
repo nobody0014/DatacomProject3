@@ -1,10 +1,12 @@
 
 import jargs.gnu.CmdLineParser;
+import spark.Request;
 import spark.Route;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import org.slf4j.*;
 
 import static spark.Spark.*;
 
@@ -62,9 +64,15 @@ public class Main {
         StatusReporter sr = new StatusReporter();
         s.start();
 
+        Logger log = LoggerFactory.getLogger(Main.class);
+        log.info("Main");
 
         //s.registered()
         port(Config.DEFAULT_PORT);
+
+        before((request, response) -> {
+            log.info(requestInfoToString(request));
+        });
 
         //Route
         post("/download", download(h,sr));
@@ -73,6 +81,14 @@ public class Main {
         post("/resetSystem", resetSystem(h,sr));
         get("/downloadTorrentFile", downloadTorrentFile());
         get("/downloadTorrentFileSize", downloadTorrentFileSize());
+    }
+
+    private static String requestInfoToString(Request request) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(request.requestMethod());
+        sb.append(" " + request.url());
+        sb.append(" " + request.body());
+        return sb.toString();
     }
 
 
@@ -92,6 +108,9 @@ public class Main {
                 System.out.println("Client: " + client);
 
                 TorrentClient tc = new TorrentClient(client,fileName,Config.DEFAULT_PORT);
+
+                CountDownLatch latch = new CountDownLatch(1);
+                h.setLatch(latch);
                 h.setSetting(false,fileName);
                 h.setHostIddr(ip);
                 sr.setMasterIP(client);
@@ -104,11 +123,13 @@ public class Main {
                 System.out.println("Starting the download of the actual file");
                 h.start();
 
+                latch.await();
+
                 System.out.println("Starting the client status reporter");
                 sr.start();
 
-            }
-            return null;
+            }else{System.out.println("The client is working");}
+            return "started the download";
         };
     }
 
@@ -119,7 +140,6 @@ public class Main {
 
             String fileName = request.headers("fileName");
             File fn = new File(fileName);
-
 
 
             //If the client is working, there is a file being transmitted in the system
@@ -170,49 +190,26 @@ public class Main {
                     rn.start();
 
                 }
-            }
-            return null;
+            }else{System.out.println("The client is working");}
+            return "Started the upload";
         };
     }
 
-
-
-
-    private static Route downloadTorrentFile() {
-        return (request, response) -> {
-
-            if(ClientLevel == Level.UPLOADER){
-                System.out.println("Request for torrent file coming in from " + request.ip());
-                long byteStart,byteEnd;
-                String[] byteRange = request.headers("bytes").split("-");
-                byteStart = Long.valueOf(byteRange[0]);
-                if(byteRange.length > 1){
-                    byteEnd = Long.valueOf(byteRange[1]);
-                }else{
-                    byteEnd = fileSize;
-                }
-                int length = (int) (byteEnd-byteStart);
-                raf.seek(byteStart);
-                byte[] toReturn = new byte[length];
-                raf.read(toReturn);
-                return toReturn;
-            }
-            return null;
-        };
-    }
 
 
     private static Route reportClientStatus() {
         return (request, response) -> {
+            System.out.println("Report coming in from: " + request.ip());
             if(ClientStatus == Status.WORKING){
-                System.out.println("Report coming in from: " + request.ip());
                 statusCheckers.putIfAbsent(request.ip(),false);
                 if (request.headers("status") != null){
-                    statusCheckers.put(request.ip(), Boolean.valueOf(request.headers("status")));
+                    if(Double.valueOf(request.headers("status")) >= 100.0){
+                        statusCheckers.put(request.ip(), true);
+                    }else{statusCheckers.put(request.ip(), false);}
                 }
-                System.out.println(request.ip() + "'s Status: " + request.headers("status"));
-            }
-            return null;
+                System.out.printf("%s \r",request.ip() + "'s completion Status: " + request.headers("status"));
+            }else{System.out.println("The client is not working");}
+            return "Report received";
         };
     }
 
@@ -231,7 +228,7 @@ public class Main {
                 raf = null;
                 fileSize = 0;
             }
-            return null;
+            return "System resetted";
         };
     }
 
@@ -243,7 +240,29 @@ public class Main {
                 response.header("size",String.valueOf(fileSize));
                 return fileSize;
             }
-            return null;
+            return "Not possible to download";
+        };
+    }
+
+    private static Route downloadTorrentFile() {
+        return (request, response) -> {
+            if(ClientLevel == Level.UPLOADER){
+                System.out.println("Request for torrent file coming in from " + request.ip());
+                long byteStart,byteEnd;
+                String[] byteRange = request.headers("bytes").split("-");
+                byteStart = Long.valueOf(byteRange[0]);
+                if(byteRange.length > 1){
+                    byteEnd = Long.valueOf(byteRange[1]);
+                }else{
+                    byteEnd = fileSize;
+                }
+                int length = (int) (byteEnd-byteStart);
+                raf.seek(byteStart);
+                byte[] toReturn = new byte[length];
+                raf.read(toReturn);
+                return toReturn;
+            }
+            return "Not possible to download";
         };
     }
 

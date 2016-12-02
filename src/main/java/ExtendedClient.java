@@ -10,6 +10,7 @@ import java.util.concurrent.CountDownLatch;
 
 public class ExtendedClient implements Runnable{
     Client client;
+    ProgressObserver progress;
 
     public ExtendedClient(InetAddress ip, SharedTorrent torrent) throws IOException{
         this.client = new Client(ip,torrent);
@@ -20,15 +21,12 @@ public class ExtendedClient implements Runnable{
         this.client.setMaxDownloadRate(down);
     }
 
+    public void setProgressObserver(ProgressObserver pro){
+        this.progress = pro;
+    }
+
     public void addObserver(){
-        this.client.addObserver(new Observer() {
-            @Override
-            public void update(Observable o, Object arg) {
-                Client client = (Client) o;
-                float progress = client.getTorrent().getCompletion();
-                System.out.println(client.getTorrent().getName() + "'s download progress: " + progress);
-            }
-        });
+        this.client.addObserver(this.progress);
     }
 
     @Override
@@ -38,8 +36,8 @@ public class ExtendedClient implements Runnable{
         this.client.waitForCompletion();
     }
 
-
     public void stop(){
+        this.client.deleteObservers();
         this.client.stop();
     }
 }
